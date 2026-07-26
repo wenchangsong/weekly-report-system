@@ -14,8 +14,8 @@ router.post('/register', (req: Request, res: Response, next: NextFunction) => {
     const result = authService.registerUser({ username, email, password, supervisorId: supervisor_id });
     res.status(201).json(result);
   } catch (err: any) {
-    if (err.message === '用户名或邮箱已存在') {
-      res.status(409).json({ error: err.message });
+    if (err.message === '用户名或邮箱已存在' || err.message === '密码至少6位') {
+      res.status(400).json({ error: err.message });
     } else {
       next(err);
     }

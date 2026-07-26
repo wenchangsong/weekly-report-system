@@ -10,6 +10,9 @@ export function registerUser(input: {
   role?: string;
   supervisorId?: number | null;
 }) {
+  if (!input.password || input.password.length < 6) {
+    throw new Error('密码至少6位');
+  }
   const existing = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(input.username, input.email);
   if (existing) {
     throw new Error('用户名或邮箱已存在');

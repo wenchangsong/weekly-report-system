@@ -22,6 +22,10 @@ export default function RegisterPage() {
       addToast('请填写所有必填项', 'error');
       return;
     }
+    if (password.length < 6) {
+      addToast('密码至少6位', 'error');
+      return;
+    }
     setLoading(true);
     try {
       const data = await register({ username, email, password });
