@@ -23,12 +23,13 @@ COPY --from=server-build /app/server/package.json ./server/
 
 COPY --from=frontend-build /app/client/dist ./client/dist
 
-RUN mkdir -p /data
+RUN mkdir -p /data/uploads
 
 EXPOSE 3001
 
 ENV NODE_ENV=production
 ENV DB_PATH=/data/weekly.db
+ENV UPLOAD_DIR=/data/uploads
 ENV PORT=3001
 
 ENTRYPOINT ["/sbin/tini", "--"]

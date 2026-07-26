@@ -15,8 +15,9 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
 
-  // Serve uploaded files
-  app.use('/uploads', express.static(path.join(__dirname, '..', '..', '..', 'data', 'uploads')));
+  // Serve uploaded files (from UPLOAD_DIR env or local data dir)
+  const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', '..', 'data', 'uploads');
+  app.use('/uploads', express.static(uploadDir));
 
   app.use('/api', routes);
 
