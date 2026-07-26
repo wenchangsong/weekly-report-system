@@ -6,8 +6,6 @@ import { Button } from '../components/ui/Button';
 import { StatusBadge } from '../components/reports/StatusBadge';
 import { CommentList } from '../components/comments/CommentList';
 import { Spinner } from '../components/ui/Spinner';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import type { Report } from '../types';
@@ -29,54 +27,34 @@ export default function ReportDetailPage() {
   }, [id]);
 
   const handleRetract = async () => {
-    try {
-      const updated = await retractReport(Number(id));
-      setReport(updated);
-      addToast('周报已撤回，可重新编辑', 'success');
-    } catch (err: any) {
-      addToast(err.response?.data?.error || '撤回失败', 'error');
-    }
+    try { setReport(await retractReport(Number(id))); addToast('已撤回', 'success'); }
+    catch (err: any) { addToast(err.response?.data?.error || '撤回失败', 'error'); }
   };
 
   const handleReject = async () => {
-    try {
-      const updated = await rejectReport(Number(id));
-      setReport(updated);
-      addToast('已打回，状态退回草稿', 'success');
-    } catch (err: any) {
-      addToast(err.response?.data?.error || '驳回失败', 'error');
-    }
+    try { setReport(await rejectReport(Number(id))); addToast('已打回', 'success'); }
+    catch (err: any) { addToast(err.response?.data?.error || '驳回失败', 'error'); }
   };
 
   const handleReview = async () => {
-    try {
-      const updated = await reviewReport(Number(id));
-      setReport(updated);
-      addToast('审核通过', 'success');
-    } catch (err: any) {
-      addToast(err.response?.data?.error || '审核失败', 'error');
-    }
+    try { setReport(await reviewReport(Number(id))); addToast('审核通过', 'success'); }
+    catch (err: any) { addToast(err.response?.data?.error || '审核失败', 'error'); }
   };
 
   const handleDelete = async () => {
-    const msg = report?.reviewed ? '确定要删除这份已审核的周报吗？' : '确定要删除这份周报吗？';
-    if (!confirm(msg)) return;
-    try {
-      await deleteReport(Number(id));
-      addToast('周报已删除', 'success');
-      navigate('/reports');
-    } catch (err: any) {
-      addToast(err.response?.data?.error || '删除失败', 'error');
-    }
+    if (!confirm('确定要删除这份周报吗？')) return;
+    try { await deleteReport(Number(id)); addToast('已删除', 'success'); navigate('/reports'); }
+    catch (err: any) { addToast(err.response?.data?.error || '删除失败', 'error'); }
   };
 
   if (loading) return <div className="flex justify-center py-16"><Spinner /></div>;
-  if (!report) return <p className="text-surface-500 text-center py-16">周报不存在</p>;
+  if (!report) return <p className="text-center text-surface-500 py-16">周报不存在</p>;
 
   const isOwner = user?.id === report.user_id;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-surface-800">
@@ -99,9 +77,7 @@ export default function ReportDetailPage() {
           )}
           {isOwner && report.status === 'draft' && (
             <>
-              <Link to={`/reports/${report.id}/edit`}>
-                <Button variant="secondary" size="sm">编辑</Button>
-              </Link>
+              <Link to={`/reports/${report.id}/edit`}><Button variant="secondary" size="sm">编辑</Button></Link>
               <Button variant="ghost" size="sm" onClick={handleDelete}>删除</Button>
             </>
           )}
@@ -111,28 +87,13 @@ export default function ReportDetailPage() {
         </div>
       </div>
 
+      {/* Article body */}
       <Card>
-        <h3 className="font-medium text-surface-700 mb-2">本周完成工作</h3>
-        <div className="prose prose-sm max-w-none text-surface-600">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.work_done || '暂无'}</ReactMarkdown>
-        </div>
+        <div className="rte-content" dangerouslySetInnerHTML={{ __html: report.work_done || '<p style="color:#94a3b8">暂无内容</p>' }} />
       </Card>
 
-      <Card>
-        <h3 className="font-medium text-surface-700 mb-2">下周工作计划</h3>
-        <div className="prose prose-sm max-w-none text-surface-600">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.plan_next || '暂无'}</ReactMarkdown>
-        </div>
-      </Card>
-
-      <Card>
-        <h3 className="font-medium text-surface-700 mb-2">问题与风险</h3>
-        <div className="prose prose-sm max-w-none text-surface-600">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.issues || '暂无'}</ReactMarkdown>
-        </div>
-      </Card>
-
-      <CommentList reportId={report.id} />
+      {/* Comments — only for submitted reports, not drafts */}
+      {report.status !== 'draft' && <CommentList reportId={report.id} />}
     </div>
   );
 }

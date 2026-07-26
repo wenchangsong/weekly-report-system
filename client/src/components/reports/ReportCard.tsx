@@ -4,6 +4,13 @@ import { StatusBadge } from './StatusBadge';
 import type { Report } from '../../types';
 import { formatDate, formatWeekLabel } from '../../utils/date';
 
+function stripHtml(html: string) {
+  if (!html) return '暂无内容';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
 export function ReportCard({ report }: { report: Report }) {
   const navigate = useNavigate();
 
@@ -21,7 +28,7 @@ export function ReportCard({ report }: { report: Report }) {
         <StatusBadge status={report.status} reviewed={report.reviewed} />
       </div>
       <p className="text-sm text-surface-600 line-clamp-2">
-        {report.work_done || '暂无内容'}
+        {stripHtml(report.work_done)}
       </p>
     </Card>
   );

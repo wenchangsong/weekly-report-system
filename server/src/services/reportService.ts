@@ -258,11 +258,36 @@ export function getReportsForExport(filters: ListFilters = {}) {
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-  return db.prepare(`
+  const rows = db.prepare(`
     SELECT r.week_start, r.week_end, u.username, u.email,
            r.work_done, r.plan_next, r.issues, r.status, r.created_at
     FROM reports r JOIN users u ON r.user_id = u.id
     ${where}
     ORDER BY r.week_start DESC, u.username
-  `).all(...params);
+  `).all(...params) as any[];
+
+  // Strip HTML tags for human-readable Excel export
+  const stripHtml = (html: string) => {
+    if (!html) return '';
+    return html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/h[1-6]>/gi, '\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
+  return rows.map((r) => ({
+    ...r,
+    work_done: stripHtml(r.work_done),
+    plan_next: stripHtml(r.plan_next),
+    issues: stripHtml(r.issues),
+  }));
 }

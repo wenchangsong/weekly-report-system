@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { authenticate } from '../middleware/auth';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', '..', 'data', 'uploads');
 
@@ -27,6 +28,7 @@ const upload = multer({
 });
 
 const router = Router();
+router.use(authenticate);
 
 router.post('/', (req: any, res: any) => {
   upload.single('file')(req, res, (err: any) => {
