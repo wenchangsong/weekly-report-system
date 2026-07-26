@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getReports } from '../api/reports';
 import { getMyTeams, getMembersWithoutReport, type Team } from '../api/teams';
 import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 import { StatusBadge } from '../components/reports/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useAuthStore } from '../stores/authStore';
@@ -10,10 +11,17 @@ import { useUIStore } from '../stores/uiStore';
 import type { Report } from '../types';
 import { formatWeekLabel, formatDate } from '../utils/date';
 
+function stripHtml(html: string) {
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').slice(0, 100);
+}
+
 export default function TeamPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [missingMembers, setMissingMembers] = useState<{ id: number; username: string }[]>([]);
-  const [ownedTeams, setOwnedTeams] = useState<Team[]>([]);
+  const [myTeams, setMyTeams] = useState<Team[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const user = useAuthStore((s) => s.user);
@@ -21,13 +29,15 @@ export default function TeamPage() {
 
   useEffect(() => {
     getMyTeams().then((teams) => {
-      const owned = teams.filter((t) => t.my_role === 'owner');
-      setOwnedTeams(owned);
-      if (owned.length > 0 && !selectedTeamId) {
-        setSelectedTeamId(owned[0].id);
+      setMyTeams(teams);
+      if (teams.length > 0 && !selectedTeamId) {
+        setSelectedTeamId(teams[0].id);
       }
     }).catch(() => {});
   }, []);
+
+  const selectedTeam = myTeams.find((t) => t.id === selectedTeamId);
+  const isOwner = selectedTeam?.my_role === 'owner';
 
   const loadReports = useCallback(async () => {
     if (!selectedTeamId) return;
@@ -35,7 +45,7 @@ export default function TeamPage() {
     try {
       const [data, mm] = await Promise.all([
         getReports({ team_id: selectedTeamId, limit: 50 }),
-        getMembersWithoutReport(selectedTeamId),
+        isOwner ? getMembersWithoutReport(selectedTeamId) : Promise.resolve([]),
       ]);
       setReports(data.rows);
       setMissingMembers(Array.isArray(mm) ? mm : []);
@@ -44,19 +54,21 @@ export default function TeamPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedTeamId]);
+  }, [selectedTeamId, isOwner]);
 
   useEffect(() => { loadReports(); }, [loadReports]);
 
-  if (ownedTeams.length === 0) {
+  if (myTeams.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
-        <EmptyState title="暂无管理的团队" description="创建或申请成为团队负责人后再查看" />
+        <EmptyState
+          title="暂无团队"
+          description="你还没有加入任何团队"
+          action={<Link to="/teams"><Button size="sm">去加入团队</Button></Link>}
+        />
       </div>
     );
   }
-
-  const selectedTeam = ownedTeams.find((t) => t.id === selectedTeamId);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -67,13 +79,15 @@ export default function TeamPage() {
           onChange={(e) => setSelectedTeamId(Number(e.target.value))}
           className="text-sm border border-surface-300 rounded-lg px-3 py-2 bg-white text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          {ownedTeams.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
+          {myTeams.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}{t.my_role === 'owner' ? ' (管理)' : ''}
+            </option>
           ))}
         </select>
       </div>
 
-      {missingMembers.length > 0 && (
+      {isOwner && missingMembers.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50">
           <h2 className="font-semibold text-surface-800 mb-3">本周未提交周报 ({missingMembers.length})</h2>
           <div className="flex flex-wrap gap-2">
@@ -89,10 +103,7 @@ export default function TeamPage() {
       {loading ? (
         <p className="text-sm text-surface-400">加载中...</p>
       ) : reports.length === 0 ? (
-        <EmptyState
-          title="暂无周报"
-          description={selectedTeam ? `"${selectedTeam.name}" 的团队成员还没有提交周报` : '请先选择一个团队'}
-        />
+        <EmptyState title="暂无周报" description={selectedTeam ? `"${selectedTeam.name}" 暂无周报` : '请选择一个团队'} />
       ) : (
         <div className="space-y-3">
           {reports.map((r) => (
@@ -109,7 +120,7 @@ export default function TeamPage() {
                     </p>
                   </div>
                   <p className="text-sm text-surface-600 max-w-xs truncate">
-                    {r.work_done || '暂无内容'}
+                    {stripHtml(r.work_done)}
                   </p>
                 </div>
               </Card>
