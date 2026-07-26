@@ -5,6 +5,8 @@ export function buildExportWorkbook(filters: {
   weekStart?: string;
   weekEnd?: string;
   userId?: number;
+  teamId?: number;
+  viewerId?: number;
   status?: string;
 }): ExcelJS.Workbook {
   const rows = getReportsForExport(filters) as any[];
