@@ -18,14 +18,14 @@ export function Topbar() {
   useEffect(() => {
     getMyTeams().then((t) => {
       setTeams(t);
-      // Clear active team if it no longer exists
       if (activeTeamId && !t.find((x) => x.id === activeTeamId)) {
         setActiveTeamId(null);
       }
     }).catch(() => {});
   }, [teamRefreshKey]);
 
-  const activeTeam = teams.find((t) => t.id === activeTeamId);
+  // Default to first team if nothing selected
+  const effectiveId = activeTeamId || (teams.length > 0 ? teams[0].id : null);
 
   return (
     <header className="sticky top-0 z-10 h-16 bg-white/80 backdrop-blur-md border-b border-surface-200 flex items-center justify-between px-4 lg:px-6">
@@ -41,11 +41,10 @@ export function Topbar() {
       <div className="flex items-center gap-2 ml-2">
         {teams.length > 0 && !hideSwitcher && (
           <select
-            value={activeTeamId || ''}
-            onChange={(e) => setActiveTeamId(e.target.value ? Number(e.target.value) : null)}
+            value={effectiveId || ''}
+            onChange={(e) => setActiveTeamId(Number(e.target.value))}
             className="text-sm border border-surface-300 rounded-lg px-2 py-1.5 bg-white text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
-            <option value="">全部团队</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
